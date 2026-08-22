@@ -64,9 +64,9 @@ cron.schedule('*/10 * * * *', async () => {
             console.log("No expiry rooms found")
             return
         }
-        for (rooms in expiredrooms) {
-            console.log(`Cleaning room ${rooms}`)
-            for (files in rooms.files) {
+        for (const room of expiredrooms) {
+            console.log(`Cleaning room ${room.roomCode}`)
+            for (const file of room.files) {
                 try {
                     const { data } = await octokit.repos.getContent({
                         owner: "VipulGupta2610",
@@ -81,11 +81,11 @@ cron.schedule('*/10 * * * *', async () => {
                         sha: data.sha
                     });
                 } catch (error) {
-
+                    console.error("Failed to delete file from GitHub", error.message);
                 }
             }
-            await RoomModel.findOneAndDelete(files._id)
-            console.log("Successfully deleted file ", files.fileName)
+            await RoomModel.findByIdAndDelete(room._id)
+            console.log("Successfully deleted room ", room.roomCode)
         }
     } catch (error) {
         console.log("Error at deleting old files of room ", error)
