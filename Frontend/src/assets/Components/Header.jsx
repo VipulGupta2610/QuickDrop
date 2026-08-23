@@ -9,9 +9,7 @@ const Header = () => {
         {/* Logo */}
         <Link to={"/"}>
         <div className="flex items-center gap-2 group cursor-pointer">
-          <div className="bg-blue-600 p-1.5 rounded-lg group-hover:rotate-12 transition-transform">
-            <Zap className="w-5 h-5 text-white fill-current" />
-          </div>
+          <img src="/logo.jpg" alt="QuickDrop Logo" className="w-8 h-8 rounded-lg group-hover:rotate-12 transition-transform" />
           <span className="text-xl font-bold tracking-tight text-white">
             Quick<span className="text-blue-500">Drop</span>
           </span>
