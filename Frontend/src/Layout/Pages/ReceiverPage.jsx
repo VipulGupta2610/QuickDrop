@@ -17,7 +17,6 @@ const ReceiverPage = () => {
     const fetchFileInfo = async () => {
       try {
         const res = await api.get(`/ReceiverPage/${inputCode}`);
-        console.log("File Data Received:", res.data);
         setFileData({
           name: res.data.fileName,
           url: res.data.downloadUrl,
@@ -29,24 +28,19 @@ const ReceiverPage = () => {
         setConnectionStatus('error');
       }
     };
-
     if (inputCode) fetchFileInfo();
   }, [inputCode]);
 
-  // FIX: Use fetch + blob URL to avoid cross-origin sandboxed iframe script blocking
   const handleDownload = async () => {
     if (!fileData?.url) return;
-
     setConnectionStatus('downloading');
     setProgress(0);
 
     try {
-      // Fetch the file as a blob to avoid cross-origin 'allow-scripts' sandbox error
       const response = await fetch(fileData.url);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
 
-      // Simulate progress animation
       let currentProgress = 0;
       const interval = setInterval(() => {
         currentProgress += 5;
@@ -54,15 +48,12 @@ const ReceiverPage = () => {
         if (currentProgress >= 95) clearInterval(interval);
       }, 40);
 
-      // Once blob is ready, trigger download using blob URL (no sandbox issue)
       const link = document.createElement('a');
       link.href = blobUrl;
       link.setAttribute('download', fileData.name || 'quickdrop-file');
       document.body.appendChild(link);
       link.click();
       link.remove();
-
-      // Cleanup blob URL
       setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
 
       clearInterval(interval);
@@ -70,12 +61,10 @@ const ReceiverPage = () => {
       setTimeout(() => setConnectionStatus('finished'), 400);
     } catch (error) {
       console.error("Download error:", error);
-      // Fallback: direct link approach
       const link = document.createElement('a');
       link.href = fileData.url;
       link.setAttribute('download', fileData.name || 'quickdrop-file');
       link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -85,15 +74,13 @@ const ReceiverPage = () => {
   };
 
   return (
-    <div className="min-h-screen text-slate-200 flex flex-col items-center justify-center px-4 sm:px-6 py-10 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #020817 0%, #0a1628 50%, #020817 100%)' }}
-    >
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-10 relative overflow-hidden">
+
       {/* Background glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-600/8 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-800/5 blur-[80px] rounded-full pointer-events-none" />
+      <div className="bg-glow" style={{ top: '-50px', left: '35%', width: '500px', height: '350px', background: 'rgba(37,99,235,0.06)' }} />
 
       {/* Back link */}
-      <Link to="/" className="absolute top-6 left-4 sm:left-8 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-sm transition-colors group">
+      <Link to="/" className="absolute top-6 left-4 sm:left-8 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-sm transition-colors group z-20">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         <span>Back</span>
       </Link>
@@ -102,24 +89,13 @@ const ReceiverPage = () => {
         initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-md"
-        style={{
-          background: 'rgba(10, 22, 40, 0.7)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '2rem',
-          padding: '2rem',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(59,130,246,0.05)',
-        }}
+        className="bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] relative z-10 w-full max-w-md p-6 sm:p-8"
       >
-        {/* Header Status Row */}
+        {/* Header Row */}
         <div className="flex flex-wrap justify-between items-center gap-3 mb-8">
-          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full">
-            <Zap className="w-3 h-3 text-blue-400 fill-current" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">
-              Room: {inputCode}
-            </span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/30 text-blue-300 text-[11px] font-bold tracking-widest uppercase">
+            <Zap className="w-3 h-3 fill-current" />
+            Room: {inputCode}
           </div>
           <div className="flex items-center gap-1.5 text-slate-400">
             <Clock className="w-3.5 h-3.5" />
@@ -130,47 +106,28 @@ const ReceiverPage = () => {
         {/* File Info */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative mb-5">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-[1.5rem] flex items-center justify-center"
-              style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}
-            >
-              <div className="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full" />
-              <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-blue-400 relative z-10" />
+            <div className="flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/10 text-blue-300 rounded-2xl transition-transform duration-300 w-20 h-20 sm:w-24 sm:h-24">
+              <FileText className="w-10 h-10 sm:w-12 sm:h-12" />
             </div>
             {connectionStatus === 'ready' && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-slate-900"
-              >
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-slate-900">
                 <CheckCircle2 className="w-3 h-3 text-white" />
               </motion.div>
             )}
           </div>
-
-          <h2 className="text-lg sm:text-xl font-bold text-white mb-1 truncate w-full max-w-xs px-2">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-1 truncate w-full max-w-xs">
             {fileData ? fileData.name : 'Loading File...'}
           </h2>
-          <p className="text-slate-500 text-sm">
-            {fileData ? fileData.size : 'Checking vault...'}
-          </p>
+          <p className="text-slate-500 text-sm">{fileData ? fileData.size : 'Checking vault...'}</p>
         </div>
 
         {/* Action States */}
         <div className="space-y-4 mb-8">
           <AnimatePresence mode="wait">
-
             {connectionStatus === 'connecting' && (
-              <motion.div
-                key="connecting"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-3 py-5"
-              >
+              <motion.div key="connecting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-3 py-5">
                 <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">
-                  Establishing Secure Channel...
-                </p>
+                <p className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Establishing Secure Channel...</p>
               </motion.div>
             )}
 
@@ -179,52 +136,35 @@ const ReceiverPage = () => {
                 key="ready"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(59,130,246,0.3)' }}
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleDownload}
-                className="w-full text-white font-bold py-4 sm:py-5 rounded-2xl flex items-center justify-center gap-3 transition-all text-sm sm:text-base"
-                style={{
-                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                  boxShadow: '0 10px 30px rgba(37,99,235,0.3)',
-                }}
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-indigo-500 text-white font-semibold rounded-2xl transition-all duration-300 shadow-[0_4px_15px_rgba(37,99,235,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_8px_25px_rgba(37,99,235,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-0.5 hover:brightness-110 active:scale-95 w-full py-4 sm:py-5 flex items-center justify-center gap-3 text-sm sm:text-base"
               >
-                <Download className="w-5 h-5" />
-                Receive File
+                <Download className="w-5 h-5" /> Receive File
               </motion.button>
             )}
 
             {connectionStatus === 'downloading' && (
-              <motion.div
-                key="downloading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-3 py-4"
-              >
-                <div className="w-full h-2 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)' }}
-                >
+              <motion.div key="downloading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 py-4">
+                <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
-                    transition={{ ease: 'easeOut' }}
                     className="h-full rounded-full"
                     style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', boxShadow: '0 0 12px rgba(59,130,246,0.5)' }}
                   />
                 </div>
-                <p className="text-center text-[11px] font-mono text-blue-400 uppercase tracking-widest">
+                <p className="text-center text-[11px] text-blue-400 uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Decrypting: {progress}%
                 </p>
               </motion.div>
             )}
 
             {connectionStatus === 'finished' && (
-              <motion.div
-                key="finished"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="rounded-2xl p-4 flex items-center gap-4"
-                style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
+              <motion.div key="finished" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '1rem', padding: '1rem' }}
+                className="flex items-center gap-4"
               >
                 <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
                   <CheckCircle2 className="w-5 h-5 text-white" />
@@ -237,12 +177,9 @@ const ReceiverPage = () => {
             )}
 
             {connectionStatus === 'error' && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="rounded-2xl p-4 flex items-center gap-4"
-                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}
+              <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '1rem', padding: '1rem' }}
+                className="flex items-center gap-4"
               >
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
                 <div>
@@ -251,26 +188,24 @@ const ReceiverPage = () => {
                 </div>
               </motion.div>
             )}
-
           </AnimatePresence>
         </div>
 
         {/* Security Footer */}
-        <div className="pt-5 border-t grid grid-cols-2 gap-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="pt-5 border-t border-white/5 grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">AES-256 E2E</span>
           </div>
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+            <AlertCircle className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Zero Retention</span>
           </div>
         </div>
       </motion.div>
 
-      {/* Brand signature */}
       <p className="mt-8 text-slate-700 text-[10px] uppercase tracking-[0.3em] font-bold">
-        Quick<span className="text-blue-600">Drop</span> Security Protocol v1.0
+        Quick<span className="text-blue-500">Drop</span> Security Protocol v1.0
       </p>
     </div>
   );

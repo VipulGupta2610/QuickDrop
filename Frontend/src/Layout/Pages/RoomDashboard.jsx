@@ -71,7 +71,7 @@ const RoomDashboard = () => {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center" style={{ background: '#020817' }}>
+      <div className="h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-blue-400" />
           <p className="text-slate-500 text-sm uppercase tracking-widest">Loading Room...</p>
@@ -139,7 +139,7 @@ const RoomDashboard = () => {
   );
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ background: '#020817', color: '#e2e8f0' }}>
+    <div className="h-screen flex overflow-hidden text-slate-200">
 
       {/* ── SIDEBAR (Desktop) ── */}
       <aside
