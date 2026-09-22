@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, Shield, Menu, X, Github } from 'lucide-react';
+import { Zap, Shield, Menu, X, GitBranch } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const Header = () => {
@@ -60,7 +60,7 @@ const Header = () => {
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl transition-all duration-200"
             >
-              <Github className="w-4 h-4" />
+            <GitBranch className="w-4 h-4" />
               <span>Source</span>
             </a>
           </div>
@@ -101,7 +101,7 @@ const Header = () => {
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white bg-white/5 border border-white/10 px-4 py-2 rounded-xl transition-colors w-fit"
           >
-            <Github className="w-4 h-4" />
+            <GitBranch className="w-4 h-4" />
             Source
           </a>
         </div>

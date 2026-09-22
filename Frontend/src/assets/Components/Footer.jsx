@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, ShieldCheck, Zap, Github } from 'lucide-react';
+import { Globe, ShieldCheck, Zap, GitBranch } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Footer = () => {
@@ -79,7 +79,7 @@ const Footer = () => {
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
             >
-              <Github className="w-4 h-4" />
+              <GitBranch className="w-4 h-4" />
               <span>View Source</span>
             </a>
           </div>
