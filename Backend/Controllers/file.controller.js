@@ -1,26 +1,34 @@
-import { Octokit } from "@octokit/rest";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-dotenv.config();
 import cron from 'node-cron';
-
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 import { FileModel } from "../Models/file.model.js"
 import { RoomModel } from "../Models/room.model.js";
 
-// GitHub Logic
-const uploadtogithub = async (fileBuffer, fileName) => {
-    const content = fileBuffer.toString("base64");
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
+// Helper to save file locally
+const saveLocalFile = async (fileBuffer, originalName, req) => {
+    const uniqueFileName = `${Date.now()}-${originalName}`;
+    const filePath = path.join(UPLOADS_DIR, uniqueFileName);
+    
     try {
-        const res = await octokit.repos.createOrUpdateFileContents({
-            owner: "VipulGupta2610",
-            repo: "QuickDrop-Storage",
-            path: `temp-shares/${Date.now()}-${fileName}`,
-            message: `${fileName} added on ${Date.now()}`,
-            content: content
-        });
-        return res.data.content.download_url; // Return the raw file URL
+        await fs.mkdir(UPLOADS_DIR, { recursive: true });
+        await fs.writeFile(filePath, fileBuffer);
+        
+        // Construct the download URL based on the current request
+        const protocol = req.protocol === 'https' ? 'https' : (req.get('x-forwarded-proto') || req.protocol);
+        const host = req.get('host');
+        const downloadUrl = `${protocol}://${host}/uploads/${uniqueFileName}`;
+        
+        return { downloadUrl, fileName: uniqueFileName, localPath: filePath };
     } catch (error) {
-        console.error("GitHub Error:", error);
+        console.error("Local Save Error:", error);
         throw error;
     }
 };
@@ -32,18 +40,17 @@ export const filesaver = async (req, res) => {
             return res.status(400).json({ message: "No file uploaded" });
         }
 
-        // Call the GitHub function
-        const downloadUrl = await uploadtogithub(req.file.buffer, req.file.originalname);
-
-        // Here you would save downloadUrl and roomCode to MongoDB [cite: 37]
-        const roomCodeg = Math.floor(100000 + Math.random() * 900000).toString()
+        const { downloadUrl, fileName, localPath } = await saveLocalFile(req.file.buffer, req.file.originalname, req);
+        const roomCodeg = Math.floor(100000 + Math.random() * 900000).toString();
+        
         const details = new FileModel({
             fileName: req.file.originalname,
-            path: `temp-shares/${Date.now()}-${req.file.originalname}`,
+            path: localPath,
             downloadUrl: downloadUrl,
             roomCode: roomCodeg,
-        })
-        await details.save()
+        });
+        await details.save();
+        
         res.status(200).json({
             message: "File uploaded successfully",
             downloadUrl,
@@ -54,93 +61,6 @@ export const filesaver = async (req, res) => {
         res.status(500).json({ message: 'Error at uploading file', error });
     }
 };
-
-cron.schedule('*/10 * * * *', async () => {
-    console.log("Private room files cleanup started")
-    const onehourago = new Date(Date.now() - 60 * 60 * 1000)
-    try {
-        const expiredrooms = await RoomModel.find({ createdAt: { $lt: onehourago } })
-        if (expiredrooms.length === 0) {
-            console.log("No expiry rooms found")
-            return
-        }
-        for (const room of expiredrooms) {
-            console.log(`Cleaning room ${room.roomCode}`)
-            for (const file of room.files) {
-                try {
-                    const { data } = await octokit.repos.getContent({
-                        owner: "VipulGupta2610",
-                        repo: "QuickDrop-Storage",
-                        path: file.path
-                    })
-                    await octokit.repos.deleteFile({
-                        owner: "VipulGupta2610",
-                        repo: "QuickDrop-Storage",
-                        path: file.path,
-                        message: "Session expired: Auto-deleting file",
-                        sha: data.sha
-                    });
-                } catch (error) {
-                    console.error("Failed to delete file from GitHub", error.message);
-                }
-            }
-            await RoomModel.findByIdAndDelete(room._id)
-            console.log("Successfully deleted room ", room.roomCode)
-        }
-    } catch (error) {
-        console.log("Error at deleting old files of room ", error)
-    }
-})
-
-cron.schedule('*/10 * * * *', async () => {
-    console.log("Cleanup cycle started...");
-    const onehourago = new Date(Date.now() - 60 * 60 * 1000);
-
-    try {
-        // 1. Double check your field name in the model (createdAt vs createdat)
-        const files = await FileModel.find({ createdAt: { $lt: onehourago } });
-
-        if (files.length === 0) {
-            console.log("No expired files found in database.");
-            return;
-        }
-
-        for (const file of files) {
-            try {
-                // 2. Fetch the SHA from GitHub (Required for deletion)
-                const { data } = await octokit.repos.getContent({
-                    owner: "VipulGupta2610",
-                    repo: "QuickDrop-Storage",
-                    path: file.path // Ensure this path is exactly what's on GitHub
-                });
-
-                // 3. Delete from GitHub
-                await octokit.repos.deleteFile({
-                    owner: "VipulGupta2610",
-                    repo: "QuickDrop-Storage",
-                    path: file.path,
-                    message: "Session expired: Auto-deleting file",
-                    sha: data.sha
-                });
-
-                // 4. Delete from MongoDB
-                await FileModel.findByIdAndDelete(file._id);
-                console.log(`Successfully deleted from Vault: ${file.fileName}`);
-
-            } catch (innerError) {
-                // If file is not found on GitHub, just remove it from MongoDB
-                if (innerError.status === 404) {
-                    await FileModel.findByIdAndDelete(file._id);
-                    console.log(`File not on GitHub, removed from DB: ${file.fileName}`);
-                } else {
-                    console.error(`Failed to delete ${file.fileName}:`, innerError.message);
-                }
-            }
-        }
-    } catch (error) {
-        console.error("Cron Job Main Error:", error);
-    }
-});
 
 export const sendinginfo = async (req, res) => {
     try {
@@ -167,22 +87,20 @@ export const sendinginfo = async (req, res) => {
 
 export const uploadToRoom = async (req, res) => {
     try {
-        const { roomCode } = req.body; // Frontend sends the code they are currently in
+        const { roomCode } = req.body;
         const fileBuffer = req.file.buffer;
-        const fileName = req.file.originalname;
+        const originalName = req.file.originalname;
 
-        // 1. Upload to GitHub as usual
-        const githubData = await uploadtogithub(fileBuffer, fileName);
+        const { downloadUrl, localPath } = await saveLocalFile(fileBuffer, originalName, req);
 
-        // 2. Find the room and add the file info to the array
         const updatedRoom = await RoomModel.findOneAndUpdate(
             { roomCode: roomCode },
             {
                 $push: {
                     files: {
-                        fileName: fileName,
-                        path: githubData.path,
-                        downloadUrl: githubData.downloadUrl
+                        fileName: originalName,
+                        path: localPath,
+                        downloadUrl: downloadUrl
                     }
                 }
             },
@@ -224,32 +142,29 @@ export const uploadingFilesforRoom = async (req, res) => {
         }
 
         const fileBuffer = req.file.buffer;
-        const fileName = req.file.originalname;
+        const originalName = req.file.originalname;
 
-        // 1. Upload to GitHub
-        const downloadurl = await uploadtogithub(fileBuffer, fileName);
+        const { downloadUrl, localPath } = await saveLocalFile(fileBuffer, originalName, req);
 
-        // 2. Update Room (Fixed the Mongoose warning here)
         const room = await RoomModel.findOneAndUpdate(
             { roomCode: roomnum },
             {
                 $push: {
                     files: {
-                        fileName: fileName,
-                        path: `temp-shares/${Date.now()}-${req.file.originalname}`,
-                        downloadUrl: downloadurl,
+                        fileName: originalName,
+                        path: localPath,
+                        downloadUrl: downloadUrl,
                         updatedAt: Date.now()
                     }
                 }
             },
-            { returnDocument: 'after' } // Modern replacement for { new: true }
+            { returnDocument: 'after' } 
         );
 
         if (!room) {
             return res.status(404).json({ message: "No room found with this code" });
         }
 
-        // 3. CRITICAL: Send the success response back to frontend
         return res.status(200).json({
             message: "File shared in room successfully",
             room
@@ -276,3 +191,40 @@ export const sendingRoomInfo = async (req, res) => {
         res.status(500).json({ message: "Error at fetching room info", error });
     }
 };
+
+// CRON JOBS for Local File Cleanup
+cron.schedule('*/10 * * * *', async () => {
+    console.log("Cleanup cycle started...");
+    const onehourago = new Date(Date.now() - 60 * 60 * 1000);
+
+    try {
+        // 1. Clean up individual files
+        const files = await FileModel.find({ createdAt: { $lt: onehourago } });
+        for (const file of files) {
+            try {
+                await fs.unlink(file.path);
+            } catch (err) {
+                console.error(`Failed to delete local file ${file.path}:`, err.message);
+            }
+            await FileModel.findByIdAndDelete(file._id);
+            console.log(`Successfully deleted old vault file: ${file.fileName}`);
+        }
+
+        // 2. Clean up expired rooms and their files
+        const expiredrooms = await RoomModel.find({ createdAt: { $lt: onehourago } });
+        for (const room of expiredrooms) {
+            console.log(`Cleaning expired room ${room.roomCode}`);
+            for (const file of room.files) {
+                try {
+                    await fs.unlink(file.path);
+                } catch (error) {
+                    console.error(`Failed to delete local file ${file.path}:`, error.message);
+                }
+            }
+            await RoomModel.findByIdAndDelete(room._id);
+            console.log("Successfully deleted room ", room.roomCode);
+        }
+    } catch (error) {
+        console.error("Cron Job Main Error:", error);
+    }
+});

@@ -77,7 +77,7 @@ const ReceiverPage = () => {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-10 relative overflow-hidden">
 
       {/* Background glows */}
-      <div className="bg-glow" style={{ top: '-50px', left: '35%', width: '500px', height: '350px', background: 'rgba(37,99,235,0.06)' }} />
+      <div className="absolute rounded-full pointer-events-none blur-[130px]" style={{ top: '-50px', left: '35%', width: '500px', height: '350px', background: 'rgba(37,99,235,0.06)' }} />
 
       {/* Back link */}
       <Link to="/" className="absolute top-6 left-4 sm:left-8 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-sm transition-colors group z-20">

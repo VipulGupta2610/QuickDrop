@@ -3,8 +3,19 @@ import cors from "cors"
 import dotenv from "dotenv"
 import fileroute from "../Backend/Routes/file.route.js"
 import mongoose from "mongoose"
+import path from "path"
+import fs from "fs"
+import { fileURLToPath } from "url"
 
 dotenv.config()
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
 
 const port = process.env.PORT || 4000
 
@@ -25,6 +36,8 @@ try {
     console.log(error)
 
 }
+
+app.use('/uploads', express.static(uploadDir));
 
 app.use("/" , fileroute);
 

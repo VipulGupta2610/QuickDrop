@@ -65,7 +65,7 @@ const FeaturePage = () => {
     <div className="min-h-screen py-20 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
 
       {/* Background glow */}
-      <div className="bg-glow" style={{ top: '0', left: '20%', width: '400px', height: '400px', background: 'rgba(37,99,235,0.06)' }} />
+      <div className="absolute rounded-full pointer-events-none blur-[130px]" style={{ top: '0', left: '20%', width: '400px', height: '400px', background: 'rgba(37,99,235,0.06)' }} />
 
       <div className="max-w-6xl mx-auto relative z-10">
 
