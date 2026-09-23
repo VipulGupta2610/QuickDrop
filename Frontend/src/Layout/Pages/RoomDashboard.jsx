@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   FileText, Download, Users, Zap,
   ChevronLeft, FilePlus, Loader2,
-  Copy, CheckCircle, XCircle, Shield, Clock, Menu, X
+  Copy, CheckCircle, XCircle, Shield, Clock, Menu, X, Eye
 } from 'lucide-react';
 import api from '../../assets/Components/api/axios';
 
@@ -66,6 +66,30 @@ const RoomDashboard = () => {
     } finally {
       setIsUploading(false);
       setTimeout(() => setUploadStatus("idle"), 2000);
+    }
+  };
+
+  const downloadFile = async (url, fileName) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', fileName || 'quickdrop-file');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (error) {
+      console.error("Download error:", error);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || 'quickdrop-file');
+      link.setAttribute('target', '_blank');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     }
   };
 
@@ -272,18 +296,31 @@ const RoomDashboard = () => {
                       <span className="text-sm text-slate-300 truncate">{file.fileName}</span>
                     </div>
 
-                    <a
-                      href={file.downloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-white group-hover:text-blue-400 transition-all flex-shrink-0 ml-3"
-                      style={{ background: 'rgba(255,255,255,0.04)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Download</span>
-                    </a>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      <a
+                        href={file.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-white hover:text-purple-400 transition-all cursor-pointer"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(147,51,234,0.1)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">View</span>
+                      </a>
+                      
+                      <button
+                        onClick={() => downloadFile(file.downloadUrl, file.fileName)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-white hover:text-blue-400 transition-all cursor-pointer"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Download</span>
+                      </button>
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
